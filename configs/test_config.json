@@ -14,7 +14,7 @@
     "max_tree_height": 9,
     // Path where the generated expression set will be saved. If empty string, the expression set won't be saved
     // This path is also used in training and reconstruction script as input into the model
-    "expression_set_path": "../data/expression_sets/expr_3var_9depth.json"
+    "expression_set_path": "./data/expression_sets/"
   },
   "training": {
     // Number of epochs the model trains for
@@ -25,16 +25,7 @@
     "latent_size": 32,
     "seed": 18,
     // Path where model parameters will be saved. If empty string, the parameters won't be saved
-    "param_path":  "../params/exp3_9.pt"
-  },
-  "reconstruction": {
-    // If smaller dataset is True, it will train the model with the specified number of expressions
-    "smaller_dataset": true,
-    "num_examples": 10000,
-    // Number of folds for the K-Fold cross-validation
-    "n_folds": 5,
-    // Path where results of the evaluation will be saved
-    "results_path": "../results/hvae.txt"
+    "param_path":  "./params/"
   },
   "symbolic_regression": {
     // Name of the baseline: two options currently available:
@@ -52,14 +43,14 @@
     // Threshold for the classification task
     "threshold": 0.5,
     // Path to the tabular data for symbolic regression -> train set
-    "train_set_path": "../data/telco/telco3var_train.csv",
+    //"train_set_path": "./data/train_test_data/telco_3var_train.csv",
     // Path to the tabular data for symbolic regression -> test set (not relevant yet)
-    "test_set_path": "../data/telco/telco3var_test.csv",
+    //"test_set_path": "./data/train_test_data/telco_3var_test.csv",
     // Threshold for the highest RMSE allowed, so that an equation is deemed to be successful (typically ~ 1e-7 for
     // expressions without constants and ~ 1e-4 for expressions with constant parameters)
     "success_threshold": 1e-5,
     // Path to the file where results will be saved
-    "results_path": "../results/telco3var.json",
+    "results_path": "./results/",
     "seed": 18,
     // Number of times each baseline will be ran
     "number_of_runs": 10,
