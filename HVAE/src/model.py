@@ -3,8 +3,8 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 import torch.nn as nn
 
-from tree import Node, BatchedNode
-from symbol_library import SymType
+from HVAE.src.tree import Node, BatchedNode
+from HVAE.src.symbol_library import SymType
 
 
 class HVAE(nn.Module):

@@ -2,11 +2,13 @@ from argparse import ArgumentParser
 import json
 
 import numpy as np
+import time
+
 from ProGED.ProGED.generators.grammar import GeneratorGrammar
 
-from tree import Node
-from hvae_utils import load_config_file
-from symbol_library import generate_symbol_library, SymType
+from HVAE.src.tree import Node
+from HVAE.src.hvae_utils import load_config_file
+from HVAE.src.symbol_library import generate_symbol_library, SymType
 
 
 def generate_grammar(symbols):
@@ -139,9 +141,25 @@ def generate_expressions(grammar, number_of_expressions, symbol_objects, has_con
     generator = GeneratorGrammar(grammar)
     expression_set = set()
     expressions = []
+    print_counts = [0]
+    start_time = time.time()
+    no_new_expression_counter = 0
     while len(expression_set) < number_of_expressions:
-        if len(expression_set) % 500 == 0:
-            print(f"Unique expressions generated so far: {len(expression_set)}")
+        # Termination check
+        if no_new_expression_counter >= (number_of_expressions/10):
+            print(f"No new expression generated in {no_new_expression_counter} tries. \n"
+                  f"A total of {len(expression_set)} expressions were generated and returned. \n"
+                  f"Relevant factors to finding new possible expressions are the number of variables, the maximum tree "
+                  f"depth, whether the term has constants, as well as the symbol library.")
+
+        # This output is important to determine progress in the potentially infinite while loop.
+        if len(expression_set) % (number_of_expressions/10) == 0:
+            # This should stop duplicate outputs in case of exceptions further below.
+            if len(expression_set) != print_counts[-1]:
+                print(f" Unique expressions generated so far: {len(expression_set)}. Took "
+                      f"{round((time.time() - start_time) / 60, 2)} minutes so far.")
+                print_counts.append(len(expression_set))
+
         expr = generator.generate_one()[0]
         if has_constants:
             pass
@@ -153,11 +171,15 @@ def generate_expressions(grammar, number_of_expressions, symbol_objects, has_con
         try:
             expr_tree = tokens_to_tree(expr, symbol_objects)
             if expr_tree.height() > max_depth:
+                no_new_expression_counter += 1
                 continue
             # print(expr_str)
             expressions.append(expr_tree)
             expression_set.add(expr_str)
+            no_new_expression_counter = 0
+
         except:
+            no_new_expression_counter += 1
             continue
 
     return expressions
@@ -165,7 +187,7 @@ def generate_expressions(grammar, number_of_expressions, symbol_objects, has_con
 
 if __name__ == '__main__':
     parser = ArgumentParser(prog='Expression set generation', description='Generate a set of expressions')
-    parser.add_argument("-config", default="../configs/test_config.json")
+    parser.add_argument("-config", default="../../configs/test_config.json")
     args = parser.parse_args()
 
     config = load_config_file(args.config)

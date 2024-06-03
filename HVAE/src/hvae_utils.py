@@ -1,7 +1,7 @@
 import commentjson as cjson
 import json
-from symbol_library import SymType
-from tree import Node, BatchedNode
+from HVAE.src.symbol_library import SymType
+from HVAE.src.tree import Node, BatchedNode
 
 
 def read_expressions(filepath):

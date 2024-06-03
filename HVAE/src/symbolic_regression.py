@@ -13,10 +13,10 @@ from pymoo.core.mutation import Mutation
 from pymoo.core.termination import Termination
 from pymoo.termination.max_gen import MaximumGenerationTermination
 
-from symbol_library import generate_symbol_library
-from model import HVAE
-from hvae_utils import load_config_file, create_batch, tokens_to_tree
-from evaluation import RustEval
+from HVAE.src.symbol_library import generate_symbol_library
+from HVAE.src.model import HVAE
+from HVAE.src.hvae_utils import load_config_file, create_batch, tokens_to_tree
+from HVAE.src.evaluation import RustEval
 
 
 def read_eq_data(filename):
@@ -131,7 +131,7 @@ class RandomMutation(Mutation):
         return np.random.normal(mutation_scale * X, std).astype(np.float32)
 
 
-def one_sr_run(config, baseline, re_train, seed):
+def one_sr_run(model, config, baseline, re_train, seed):
     training_config = config["training"]
     sr_config = config["symbolic_regression"]
 
@@ -208,7 +208,7 @@ def check_on_test_set(results, re_test, so):
 
 if __name__ == '__main__':
     parser = ArgumentParser(prog='Symbolic regression', description='Run a symbolic regression benchmark')
-    parser.add_argument("-config", default="../configs/test_config.json")
+    parser.add_argument("-config", default="../../configs/test_config.json")
     args = parser.parse_args()
 
     config = load_config_file(args.config)
@@ -237,10 +237,10 @@ if __name__ == '__main__':
             print(f"     Baseline: {baseline}, Run: {i+1}/{sr_config['number_of_runs']}")
             print("---------------------------------------------------------------------------")
             print()
-            results.append(one_sr_run(config, baseline, re_train, seed))
+            results.append(one_sr_run(model, config, baseline, re_train, seed))
 
     test_set = read_eq_data(sr_config["test_set_path"])
-    re_test = RustEval(train_set, default_value=sr_config["default_error"],
+    re_test = RustEval(test_set, default_value=sr_config["default_error"],
                        classification=sr_config["classification"], threshold=sr_config["threshold"])
     for i in range(len(results)):
         results[i] = check_on_test_set(results[i], re_test, so)

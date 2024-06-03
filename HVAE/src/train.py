@@ -5,9 +5,9 @@ import torch
 from torch.utils.data import Sampler, Dataset
 from tqdm import tqdm
 
-from hvae_utils import read_expressions_json, load_config_file, create_batch
-from model import HVAE
-from symbol_library import generate_symbol_library
+from HVAE.src.hvae_utils import read_expressions_json, load_config_file, create_batch
+from HVAE.src.model import HVAE
+from HVAE.src.symbol_library import generate_symbol_library
 
 
 def collate_fn(batch):
@@ -94,7 +94,7 @@ def train_hvae(model, trees, epochs=20, batch_size=32, verbose=True):
 
 if __name__ == '__main__':
     parser = ArgumentParser(prog='Model training', description='Train a HVAE model')
-    parser.add_argument("-config", default="../configs/test_config.json")
+    parser.add_argument("-config", default="../../configs/test_config.json")
     args = parser.parse_args()
 
     config = load_config_file(args.config)

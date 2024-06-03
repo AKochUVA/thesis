@@ -1,6 +1,6 @@
 import torch
 from torch.autograd import Variable
-from symbol_library import SymType
+from HVAE.src.symbol_library import SymType
 
 
 def is_float(element: any) -> bool:
