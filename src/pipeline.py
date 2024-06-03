@@ -2,24 +2,32 @@
 from argparse import ArgumentParser
 from preprocessing import load_Telco, preprocess_Telco, load_and_preprocess_KKBox
 from applied_xgboost import create_xgb_train_test, xgb_model, shap_analysis
-from evaluation import compare_model_results
-
+from evaluation import compare_model_results, evaluate_SR_expression
+from utils import (load_config_file, generate_sr_expressions, train_HVAE_model, run_symbolic_regression,
+                   save_train_test_data)
 
 
 if __name__ == '__main__':
-    parser = ArgumentParser(prog='XGB', description='Run XGBoost with SHAP analysis on dataset.')
-    parser.add_argument("-config", default="../configs/test_config.json")
+    parser = ArgumentParser(prog='Pipeline', description='Full XGBoost w/ Shapley + Symbolic Regression pipeline.')
+    parser.add_argument("-config", default="./configs/test_config.json")
     args = parser.parse_args()
+
+    # Load configurations
+    config = load_config_file(args.config)
+    expr_def_config = config['expression_definition']
+    expr_gen_config = config['expression_set_generation']
+    training_config = config['training']
+    symbolic_regression_config = config['symbolic_regression']
 
     # Fixed Settings
     random_state = 42
     test_size = 0.1
     min_normalized_importance = 0.1
     verbose = False
-    dataset = 'KKBox'
+    dataset = 'telco'
 
     # Variable Settings
-    if dataset == 'Telco':
+    if dataset == 'telco':
         drop_x = ['customerID','Churn']
         target_name = 'Churn'
         param_grid = {
@@ -33,7 +41,7 @@ if __name__ == '__main__':
         data = load_Telco(path='./data/Telco-Customer-Churn.csv')
         data = preprocess_Telco(data)
 
-    elif dataset == 'KKBox':
+    elif dataset == 'kkbox':
         drop_x = ['msno','is_churn', 'city', 'registered_via']
         target_name = 'is_churn'
         param_grid = {
@@ -45,7 +53,7 @@ if __name__ == '__main__':
         data = load_and_preprocess_KKBox(path_to_folder='./data/kkbox/')
 
     else:
-        raise ValueError(f"Wrong dataset name '{dataset}'. Allowed names are 'Telco', 'KKBox'.")
+        raise ValueError(f"Wrong dataset name '{dataset}'. Allowed names are 'telco', 'kkbox'.")
 
 
 
@@ -76,6 +84,32 @@ if __name__ == '__main__':
                                param_grid=param_grid,
                                verbose=verbose)
 
+    # Create train and test set as .csv files for Symbolic Regression
+    train_set_path, test_set_path = save_train_test_data(shap_X_train, shap_X_test, y_train, y_test)
+
+    # Generate Expression Set
+    expression_set_path = generate_sr_expressions(symbols=expr_def_config['symbols'],
+                                                  num_variables=expr_def_config['num_variables'],
+                                                  has_constants=expr_def_config['has_constants'],
+                                                  num_expressions=expr_gen_config['num_expressions'],
+                                                  max_tree_height=expr_gen_config['max_tree_height'],
+                                                  expression_set_path=expr_gen_config['expression_set_path'],
+                                                  filename=None)
+
+    # Train the HVAE model
+    params_path = train_HVAE_model(symbols=expr_def_config['symbols'],
+                                   num_variables=expr_def_config['num_variables'],
+                                   has_constants=expr_def_config['has_constants'],
+                                   max_tree_height=expr_gen_config['max_tree_height'],
+                                   expression_set_path=expression_set_path,
+                                   training_config=training_config,
+                                   verbose=verbose,
+                                   filename=None)
+
+    # Run Symbolic Regression
+    results_path = run_symbolic_regression(config, expr_def_config, expr_gen_config, symbolic_regression_config,
+                                          params_path, train_set_path, test_set_path, dataset)
+
 
     # Evaluation
     compare_model_results(full_X_test=full_X_test, shap_X_test=shap_X_test, sr_X_test=None,
@@ -83,6 +117,8 @@ if __name__ == '__main__':
                           full_xgb_model=full_xgb_model,
                           shap_xgb_model=shap_xgb_model,
                           sr_model=None)
+
+    evaluate_SR_expression(results_path, test_set_path, symbolic_regression_config['threshold'])
 
 
 
@@ -97,10 +133,12 @@ if __name__ == '__main__':
 # - function with constant or without
 
 # Pipeline Structure
+# - create train and test datasets depending on Shapley analysis
 # - create expression set if not available
 # - create train parameters if not available
 # - run symbolic regression
 # - automatic function conversion
+# - evaluation of the full XGB model, as well as the XGB model with important columns
 # - evaluation of the SR function
 # - Probability effect of each function component
 
