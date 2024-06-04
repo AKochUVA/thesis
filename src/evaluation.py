@@ -19,16 +19,21 @@ def compare_model_results(full_X_test=None, shap_X_test=None, sr_X_test=None, y_
         create_evaluation_output("Shapley XGBoost", y_test, y_pred)
 
 
-def evaluate_SR_expression(result_path, test_data_path, threshold):
+def evaluate_SR_expression(result_path, test_data_path, threshold, num_vars):
     """Evaluate the Symbolic Regression expression"""
 
-    # load best_expression and df
+    if num_vars <= 0:
+        raise ValueError("num_vars must be greater than 0.")
+
+    # load best_expressions, constants and df
     with open(result_path, 'r') as file:
         data = json.load(file)
 
     expressions = []
     for i in range(len(data)):
         expressions.append(data[i]["test"]["best_expr"])
+
+    constants = []
 
     df = pd.read_csv(test_data_path, header=None, index_col=None)
 
@@ -45,8 +50,23 @@ def evaluate_SR_expression(result_path, test_data_path, threshold):
     # Evaluate each expression
     for exp in expressions:
 
-        # Replace variables with dataframe column references
-        expression = exp.replace("A", "df.iloc[:, 0]").replace("B", "df.iloc[:, 1]").replace("D", "df.iloc[:, 2]")
+        # create copy
+        expression = exp
+
+        # List of valid characters except 'C'
+        valid_chars = [chr(i) for i in range(65, 91) if chr(i) != 'C']  # 65-90 are ASCII values for A-Z
+
+        # Replace variables with dataframe column references in a loop
+        for i in range(num_vars):
+            char = valid_chars[i]
+            expression = expression.replace(char, f"df.iloc[:, {i}]")
+
+        # Replace constants C1, C2, C3, etc. with their values from the list of constants
+        for i, value in enumerate(constants, start=1):
+            expression = expression.replace(f"C{i}", str(value))
+
+        # Replace ^2 and ^3 with **2 and **3
+        expression = expression.replace("^2", "**2").replace("^3", "**3").replace("^4", "**4").replace("^5", "**5")
 
         # Use eval to predict
         y_test = df.iloc[:, -1].values
