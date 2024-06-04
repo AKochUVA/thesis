@@ -72,7 +72,7 @@ def load_and_preprocess_KKBox(path_to_folder):
     train_path = os.path.join(path_to_folder, 'train.csv')
     members_path = os.path.join(path_to_folder, 'members_v3.csv')
     transaction_features_path = os.path.join(path_to_folder, 'transactions_features.csv')
-    user_logs_features_path = os.path.join(path_to_folder, 'user_logs_features2.csv')
+    user_logs_features_path = os.path.join(path_to_folder, 'user_logs_features_new.csv')
 
     # Load Datasets
     train = pd.read_csv(train_path)
@@ -80,8 +80,7 @@ def load_and_preprocess_KKBox(path_to_folder):
     transaction_features = pd.read_csv(transaction_features_path, index_col=0)
     user_logs_features = pd.read_csv(user_logs_features_path, index_col=0)
 
-    # Pre-processing for Members Data (pre-processing for transactions and user_logs happened externally due to size)
-    # TODO: add link to pre-processing for transactions and user_logs
+    # Pre-processing for Members Data (for pre-processing of transactions and user_logs see notebooks/EDA_KKBOX.ipynb)
     # bd renamed as age
     members = members.rename(columns={'bd': 'age'})
 
@@ -109,5 +108,9 @@ def load_and_preprocess_KKBox(path_to_folder):
     data = pd.merge(train, members, on='msno', how='left')
     data = pd.merge(data, transaction_features, on='msno', how='left')
     data = pd.merge(data, user_logs_features, on='msno', how='left')
+
+    # Symbolic Regression can not handle NaN values -> they need to be dropped
+    print(f"Dropping {data.shape[0] - data.dropna().shape[0]} rows with missing values.")
+    data = data.dropna(axis=0)
 
     return data
