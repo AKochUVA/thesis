@@ -146,9 +146,9 @@ def train_HVAE_model(symbols: list, num_variables: int, has_constants: bool,
     return save_path
 
 
-def run_symbolic_regression(config, expression_definition_config, expression_generation_config,
-                            symbolic_regression_config, params_path,
-                            train_set_path, test_set_path, dataset_name: str,
+def run_symbolic_regression(config, symbolic_regression_config,
+                            num_variables: int, symbols: list, has_constants: bool, max_tree_height: int,
+                            params_path: str, train_set_path: str, test_set_path: str, dataset_name: str,
                             results_filename: str = None):
     """Helper function to interface HVAE.src.symbolic_regression
     Runs a symbolic regression according to the configuration.
@@ -160,9 +160,7 @@ def run_symbolic_regression(config, expression_definition_config, expression_gen
                         classification=symbolic_regression_config["classification"],
                         threshold=symbolic_regression_config["threshold"])
 
-    sy_lib = generate_symbol_library(expression_definition_config["num_variables"],
-                                     expression_definition_config["symbols"],
-                                     expression_definition_config["has_constants"])
+    sy_lib = generate_symbol_library(num_vars=num_variables, symbol_list=symbols, has_constant=has_constants)
     so = {s["symbol"]: s for s in sy_lib}
     HVAE.add_symbols(sy_lib)
     model = torch.load(params_path)
@@ -191,10 +189,8 @@ def run_symbolic_regression(config, expression_definition_config, expression_gen
 
     # Create results_path
     if results_filename is None:
-        constant = '+c' if expression_definition_config['has_constants'] else ''
-        num_vars = expression_definition_config['num_variables']
-        max_tree_height = expression_generation_config['max_tree_height']
-        results_filename = f"{dataset_name}_{num_vars}var{constant}_{max_tree_height}depth.json"
+        constant = '+c' if has_constants else ''
+        results_filename = f"{dataset_name}_{num_variables}var{constant}_{max_tree_height}depth.json"
 
     results_path = symbolic_regression_config["results_path"] + results_filename
 
@@ -204,7 +200,8 @@ def run_symbolic_regression(config, expression_definition_config, expression_gen
     return results_path
 
 
-def save_train_test_data(X_train: pd.DataFrame, X_test: pd.DataFrame, y_train: pd.Series, y_test: pd.Series):
+def save_train_test_data(X_train: pd.DataFrame, X_test: pd.DataFrame, y_train: pd.Series, y_test: pd.Series,
+                         dataset_name: str):
     """Function to save training and testing data together for Symbolic Regression."""
     # Create train and test csvs for EDHiE
     EDHiE_train = pd.concat([X_train, y_train], axis=1)
@@ -218,7 +215,7 @@ def save_train_test_data(X_train: pd.DataFrame, X_test: pd.DataFrame, y_train: p
     # Save to csv in correct format (no index or header)
     path = "./data/train_test_data/"
     num_vars = len(X_train.columns)
-    filename = f"telco_{num_vars}vars"
+    filename = f"{dataset_name}_{num_vars}vars"
 
     train_set_path = path + filename + "_train.csv"
     test_set_path = path + filename + "_test.csv"
