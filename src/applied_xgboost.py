@@ -72,7 +72,7 @@ def create_xgb_train_test(data: pd.DataFrame, drop_x: list[str], target_name: st
 
 def xgb_model(X_train_encoded, X_test_encoded, y_train, y_test,
               param_grid: dict = None, scoring: str = 'f1', verbose: bool = True):
-    """Runs predetermined xgboost algorithm on (preprocessed) Telco dataset. Returns the best model.
+    """Runs predetermined xgboost algorithm on (preprocessed) dataset. Returns the best model.
     :param """
 
     print(f'Running XGBoost model on dataset with {X_train_encoded.shape[1]} features with scoring metric {scoring}.')
