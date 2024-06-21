@@ -4,7 +4,7 @@ from argparse import ArgumentParser
 from preprocessing import load_Telco, preprocess_Telco, load_and_preprocess_KKBox
 from applied_xgboost import create_xgb_train_test, xgb_model, shap_analysis
 from evaluation import compare_model_results, evaluate_SR_expression
-from utils import (load_config_file, generate_sr_expressions, train_HVAE_model, run_symbolic_regression,
+from utils import (load_config_file, generate_sr_expressions, train_HVAE_model, run_symbolic_classification,
                    save_train_test_data)
 
 if __name__ == '__main__':
@@ -23,12 +23,14 @@ if __name__ == '__main__':
     symbolic_regression_config = config['symbolic_regression']
 
     # Fixed Settings
-    random_state = 42
+    random_state = 0
     test_size = 0.1
-    min_normalized_importance = 0.05
+    min_normalized_importance = 0.079
+    # normalized importance determines number of variables kept
+    # for Telco: >=0.152 -> 1; >=0.135 -> 2; >=0.079 -> 3; >=0.074 -> 4; >= 0.067 -> 5
     use_shap = True
     verbose = True
-    dataset = 'kkbox'
+    dataset = 'telco'
 
     # Variable Settings
     if dataset == 'telco':
@@ -42,7 +44,7 @@ if __name__ == '__main__':
             'colsample_bytree': [0.5, 0.75, 1]
         }
 
-        data = load_Telco(path='./data/Telco-Customer-Churn.csv')
+        data = load_Telco(path='./data/telco/Telco-Customer-Churn.csv')
         data = preprocess_Telco(data)
 
     elif dataset == 'kkbox':
@@ -96,12 +98,15 @@ if __name__ == '__main__':
                                                              dataset_name=dataset)
         num_variables = len(full_X_train.columns)
 
+    # Set maximum tree height
+    maximum_tree_height = int(num_variables * 2 + 1)
+
     # Generate Expression Set
     expression_set_path = generate_sr_expressions(symbols=expr_def_config['symbols'],
                                                   num_variables=num_variables,
                                                   has_constants=expr_def_config['has_constants'],
                                                   num_expressions=expr_gen_config['num_expressions'],
-                                                  max_tree_height=expr_gen_config['max_tree_height'],
+                                                  max_tree_height=maximum_tree_height,
                                                   expression_set_path=expr_gen_config['expression_set_path'],
                                                   filename=None)
 
@@ -109,22 +114,19 @@ if __name__ == '__main__':
     params_path = train_HVAE_model(symbols=expr_def_config['symbols'],
                                    num_variables=num_variables,
                                    has_constants=expr_def_config['has_constants'],
-                                   max_tree_height=expr_gen_config['max_tree_height'],
+                                   max_tree_height=maximum_tree_height,
                                    expression_set_path=expression_set_path,
                                    training_config=training_config,
                                    verbose=verbose,
                                    filename=None)
 
-    # Run Symbolic Regression
-    results_path = run_symbolic_regression(config, symbolic_regression_config,
-                                           num_variables=num_variables,
-                                           symbols=expr_def_config['symbols'],
-                                           has_constants=expr_def_config['has_constants'],
-                                           max_tree_height=expr_gen_config['max_tree_height'],
-                                           params_path=params_path,
-                                           train_set_path=train_set_path,
-                                           test_set_path=test_set_path,
-                                           dataset_name=dataset)
+    # Run Symbolic Classification
+    results_path = run_symbolic_classification(config, symbolic_regression_config, num_variables=num_variables,
+                                               symbols=expr_def_config['symbols'],
+                                               has_constants=expr_def_config['has_constants'],
+                                               max_tree_height=maximum_tree_height, params_path=params_path,
+                                               train_set_path=train_set_path, test_set_path=test_set_path,
+                                               dataset_name=dataset)
 
     # Evaluation
     compare_model_results(full_X_test=full_X_test,
