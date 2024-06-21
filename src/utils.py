@@ -93,7 +93,8 @@ def train_HVAE_model(symbols: list, num_variables: int, has_constants: bool,
                      filename: str = None, use_existing: bool = True):
     """Helper function to interface HVAE.src.train.py.
     Trains a HVAE model and saves the parameters. The filename is determined by input parameters, i.e.
-    params_3var+c_7depth.json represents an expression set with num_variables=1, has_constants=True and max_tree_height=7.
+    params_3var+c_7depth.json represents an expression set with num_variables=3, has_constants=True
+    and max_tree_height=7.
     """
 
     # Time logging
@@ -146,12 +147,12 @@ def train_HVAE_model(symbols: list, num_variables: int, has_constants: bool,
     return save_path
 
 
-def run_symbolic_regression(config, symbolic_regression_config,
+def run_symbolic_classification(config, symbolic_regression_config,
                             num_variables: int, symbols: list, has_constants: bool, max_tree_height: int,
                             params_path: str, train_set_path: str, test_set_path: str, dataset_name: str,
                             results_filename: str = None):
     """Helper function to interface HVAE.src.symbolic_regression
-    Runs a symbolic regression according to the configuration.
+    Runs a symbolic classification according to the configuration.
     """
 
     train_set = read_eq_data(train_set_path)
