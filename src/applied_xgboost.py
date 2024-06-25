@@ -10,39 +10,9 @@ import shap
 from imblearn.under_sampling import RandomUnderSampler
 
 
-def create_Telco_xgb_train_test(data: pd.DataFrame, random_under_sample: bool = True, columns_to_drop: list = None,
-                                test_size: float = 0.1, random_state: int = 42):
-    """Creates the train and test sets for the Telco dataset to be used in xgboost. If columns_to_drop are given, these
-    columns are dropped from the dataset."""
-
-    # Splitting the data into train and test sets
-    X = data.drop(['customerID', 'Churn'], axis=1)  # Features
-    y = data['Churn']  # Target variable
-
-    # Random under sampling (the training set) to balance the dataset
-    if random_under_sample:
-        rus = RandomUnderSampler(random_state=random_state, replacement=False)
-        X, y = rus.fit_resample(X, y)
-
-    # Train-test split
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
-
-    # Perform one-hot encoding for categorical features
-    categorical_features = X.select_dtypes(include=['object']).columns.tolist()
-    X_train_encoded = pd.get_dummies(X_train, columns=categorical_features)
-    X_test_encoded = pd.get_dummies(X_test, columns=categorical_features)
-
-    if columns_to_drop is not None:
-        # Drop non-important features from X_train and X_test
-        X_train_encoded = X_train_encoded.drop(columns=columns_to_drop)
-        X_test_encoded = X_test_encoded.drop(columns=columns_to_drop)
-
-    return X_train_encoded, X_test_encoded, y_train, y_test
-
-
 def create_xgb_train_test(data: pd.DataFrame, drop_x: list[str], target_name: str, random_under_sample: bool = True,
                           shap_columns_to_drop: list = None, test_size: float = 0.1, random_state: int = 42):
-    """Creates the train and test sets for the Telco dataset to be used in xgboost. If columns_to_drop are given, these
+    """Creates the train and test sets for the dataset to be used in xgboost. If columns_to_drop are given, these
     columns are dropped from the dataset."""
 
     # Splitting the data into train and test sets
