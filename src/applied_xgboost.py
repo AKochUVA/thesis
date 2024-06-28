@@ -40,6 +40,48 @@ def create_xgb_train_test(data: pd.DataFrame, drop_x: list[str], target_name: st
     return X_train_encoded, X_test_encoded, y_train, y_test
 
 
+def create_xgb_train_val_test(data: pd.DataFrame, drop_x: list[str], target_name: str, random_under_sample: bool = True,
+                              shap_columns_to_drop: list = None, val_size: float = 0.1, test_size: float = 0.1,
+                              random_state: int = 42):
+    """Creates the train and test sets for the dataset to be used in xgboost. If columns_to_drop are given, these
+    columns are dropped from the dataset."""
+
+    # Splitting the data into train and test sets
+    X = data.drop(drop_x, axis=1)  # Features
+    y = data[target_name]  # Target variable
+
+    # Random under sampling (the training set) to balance the dataset
+    if random_under_sample:
+        rus = RandomUnderSampler(random_state=random_state, replacement=False)
+        X, y = rus.fit_resample(X, y)
+
+    # Train-test split
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
+
+    # Further split the training set to create a validation set
+    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=val_size,
+                                                      random_state=random_state)
+
+    # Perform one-hot encoding for categorical features
+    categorical_features = X.select_dtypes(include=['category', 'object']).columns.tolist()
+    X_train_encoded = pd.get_dummies(X_train, columns=categorical_features)
+    X_val_encoded = pd.get_dummies(X_val, columns=categorical_features)
+    X_test_encoded = pd.get_dummies(X_test, columns=categorical_features)
+
+    # Ensure the train, validation, and test sets have the same columns after encoding
+    # X_train_encoded, X_val_encoded = X_train_encoded.align(X_val_encoded, join='left', axis=1, fill_value=0)
+    # X_train_encoded, X_test_encoded = X_train_encoded.align(X_test_encoded, join='left', axis=1, fill_value=0)
+    # X_val_encoded, X_test_encoded = X_val_encoded.align(X_test_encoded, join='left', axis=1, fill_value=0)
+
+    if shap_columns_to_drop is not None:
+        # Drop non-important features from X_train, X_val, and X_test
+        X_train_encoded = X_train_encoded.drop(columns=shap_columns_to_drop, errors='ignore')
+        X_val_encoded = X_val_encoded.drop(columns=shap_columns_to_drop, errors='ignore')
+        X_test_encoded = X_test_encoded.drop(columns=shap_columns_to_drop, errors='ignore')
+
+    return X_train_encoded, X_val_encoded, X_test_encoded, y_train, y_val, y_test
+
+
 def xgb_model(X_train_encoded, X_test_encoded, y_train, y_test,
               param_grid: dict = None, scoring: str = 'f1', verbose: bool = True):
     """Runs predetermined xgboost algorithm on (preprocessed) dataset. Returns the best model.
@@ -94,9 +136,14 @@ def xgb_model(X_train_encoded, X_test_encoded, y_train, y_test,
     return best_model
 
 
-def shap_analysis(xgb_model, X_test, min_normalized_importance: float = 0.1, verbose: bool = True):
+def shap_analysis(xgb_model, X_test,
+                  min_normalized_importance: float = None, num_shap_features: int = None,
+                  verbose: bool = True):
     """Compute SHAP values for the test set and gets a feature ranking table. Returns columns to be dropped based on
     normalized_importance parameter."""
+
+    if min_normalized_importance is None and num_shap_features is None:
+        raise ValueError('Shapley analysis requires either min_normalized_importance or num_shap_features to be defined.')
 
     # Time-Logging
     start_time = time.time()
@@ -128,12 +175,28 @@ def shap_analysis(xgb_model, X_test, min_normalized_importance: float = 0.1, ver
         print(feature_ranking.head(10))
 
     # select columns to be dropped due to low normalized_importance
-    columns_to_drop = feature_ranking[feature_ranking["normalized_importance"] < min_normalized_importance]['features'].tolist()
-    columns_to_keep = feature_ranking[feature_ranking["normalized_importance"] >= min_normalized_importance]['features'].tolist()
+    if min_normalized_importance is not None:
+        columns_to_drop = feature_ranking[feature_ranking["normalized_importance"] < min_normalized_importance]['features'].tolist()
+        columns_to_keep = feature_ranking[feature_ranking["normalized_importance"] >= min_normalized_importance]['features'].tolist()
+        print(f'Shapley analysis complete. Retained columns based on minimum normalized importance are: '
+              f'{columns_to_keep}')
 
-    print(f'Shapley analysis complete. Retained columns are: {columns_to_keep}')
+    if num_shap_features is not None:
+        features_to_keep = feature_ranking['features'].iloc[:num_shap_features].tolist()
+        features_to_drop = feature_ranking['features'].iloc[num_shap_features:].tolist()
+        print(f'Shapley analysis complete. Retained columns based on num_shap_features are: '
+              f'{features_to_keep}')
 
-    return columns_to_drop
+    # Error handling
+    if min_normalized_importance is not None and num_shap_features is not None:
+        if len(columns_to_drop) != len(features_to_drop):
+            raise ValueError('min_normalized_importance and num_shap_features in method shap_analysis lead to a '
+                             'different number of features to retain. Please set only one of these attributes.')
+
+    if min_normalized_importance is not None:
+        return columns_to_drop
+    else:
+        return features_to_drop
 
 
 
