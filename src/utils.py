@@ -90,7 +90,7 @@ def generate_sr_expressions(symbols: list, num_variables: int, has_constants: bo
 
 def train_HVAE_model(symbols: list, num_variables: int, has_constants: bool,
                      max_tree_height: int, expression_set_path, training_config, verbose: bool = True,
-                     filename: str = None, use_existing: bool = True):
+                     filename: str = None, use_existing: bool = True, random_state: int = 0):
     """Helper function to interface HVAE.src.train.py.
     Trains a HVAE model and saves the parameters. The filename is determined by input parameters, i.e.
     params_3var+c_7depth.json represents an expression set with num_variables=3, has_constants=True
@@ -122,9 +122,9 @@ def train_HVAE_model(symbols: list, num_variables: int, has_constants: bool,
               f"Parameters will be saved to {param_path + filename} \n "
               f"Please note that this may take a while. Training is always verbose.")
 
-    if training_config["seed"] is not None:
-        np.random.seed(training_config["seed"])
-        torch.manual_seed(training_config["seed"])
+    if random_state is not None:
+        np.random.seed(random_state)
+        torch.manual_seed(random_state)
 
     sy_lib = generate_symbol_library(num_vars=num_variables, symbol_list=symbols, has_constant=has_constants)
     HVAE.add_symbols(sy_lib)
@@ -149,8 +149,8 @@ def train_HVAE_model(symbols: list, num_variables: int, has_constants: bool,
 
 def run_symbolic_classification(config, symbolic_regression_config,
                             num_variables: int, symbols: list, has_constants: bool, max_tree_height: int,
-                            params_path: str, train_set_path: str, test_set_path: str, dataset_name: str,
-                            results_filename: str = None):
+                            params_path: str, train_set_path: str, val_set_path: str, dataset_name: str,
+                            results_filename: str = None, random_state: int = 0):
     """Helper function to interface HVAE.src.symbolic_regression
     Runs a symbolic classification according to the configuration.
     """
@@ -169,8 +169,8 @@ def run_symbolic_classification(config, symbolic_regression_config,
     results = []
     for baseline in symbolic_regression_config["baselines"]:
         for i in range(symbolic_regression_config["number_of_runs"]):
-            if symbolic_regression_config["seed"] is not None:
-                seed = symbolic_regression_config["seed"] + i
+            if random_state is not None:
+                seed = random_state + i
             else:
                 seed = np.random.randint(np.iinfo(np.int64).max)
             print()
@@ -180,7 +180,7 @@ def run_symbolic_classification(config, symbolic_regression_config,
             print()
             results.append(one_sr_run(model, config, baseline, re_train, seed))
 
-    test_set = read_eq_data(test_set_path)
+    test_set = read_eq_data(val_set_path)
     re_test = RustEval(test_set,
                        default_value=symbolic_regression_config["default_error"],
                        classification=symbolic_regression_config["classification"],
@@ -191,7 +191,7 @@ def run_symbolic_classification(config, symbolic_regression_config,
     # Create results_path
     if results_filename is None:
         constant = '+c' if has_constants else ''
-        results_filename = f"{dataset_name}_{num_variables}var{constant}_{max_tree_height}depth.json"
+        results_filename = f"{dataset_name}_{num_variables}var{constant}_{max_tree_height}depth_seed{str(random_state)}.json"
 
     results_path = symbolic_regression_config["results_path"] + results_filename
 
@@ -201,27 +201,32 @@ def run_symbolic_classification(config, symbolic_regression_config,
     return results_path
 
 
-def save_train_test_data(X_train: pd.DataFrame, X_test: pd.DataFrame, y_train: pd.Series, y_test: pd.Series,
-                         dataset_name: str):
+def save_train_val_test_data(X_train: pd.DataFrame, X_val: pd.DataFrame, X_test: pd.DataFrame,
+                             y_train: pd.Series, y_val: pd.Series, y_test: pd.Series,
+                             dataset_name: str, random_state: int = 0):
     """Function to save training and testing data together for Symbolic Regression."""
     # Create train and test csvs for EDHiE
     EDHiE_train = pd.concat([X_train, y_train], axis=1)
+    EDHiE_val = pd.concat([X_val, y_val], axis=1)
     EDHiE_test = pd.concat([X_test, y_test], axis=1)
 
     # Turn boolean columns into int columns
     boolean_cols = EDHiE_train.select_dtypes(include=['bool']).columns
     EDHiE_train[boolean_cols] = EDHiE_train[boolean_cols].astype(int)
+    EDHiE_val[boolean_cols] = EDHiE_val[boolean_cols].astype(int)
     EDHiE_test[boolean_cols] = EDHiE_test[boolean_cols].astype(int)
 
     # Save to csv in correct format (no index or header)
-    path = "./data/train_test_data/"
+    path = "./data/train_val_test_data/"
     num_vars = len(X_train.columns)
     filename = f"{dataset_name}_{num_vars}vars"
 
-    train_set_path = path + filename + "_train.csv"
-    test_set_path = path + filename + "_test.csv"
+    train_set_path = path + filename + f"_train_seed{random_state}.csv"
+    val_set_path = path + filename + f"_val_seed{random_state}.csv"
+    test_set_path = path + filename + f"_test_seed{random_state}.csv"
 
     EDHiE_train.to_csv(path_or_buf=train_set_path, header=False, index=False)
+    EDHiE_val.to_csv(path_or_buf=val_set_path, header=False, index=False)
     EDHiE_test.to_csv(path_or_buf=test_set_path, header=False, index=False)
 
-    return train_set_path, test_set_path
+    return train_set_path, val_set_path, test_set_path
