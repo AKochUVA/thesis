@@ -110,7 +110,10 @@ def load_and_preprocess_KKBox(path_to_folder):
     data = pd.merge(data, user_logs_features, on='msno', how='left')
 
     # Symbolic Regression can not handle NaN values -> they need to be dropped
-    print(f"Dropping {data.shape[0] - data.dropna().shape[0]} rows with missing values.")
+    data_len = data.shape[0]
     data = data.dropna(axis=0)
+    data_len2 = data.shape[0]
+    print(f"Dropped {data_len - data_len2} rows with missing values. {len(data)} rows remaining.")
+
 
     return data
