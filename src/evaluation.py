@@ -87,7 +87,7 @@ def evaluate_SR_expression(result_path, test_data_path, threshold, num_vars, col
             base_model_prediction = calculate_base_model_prediction(expression, valid_chars, num_vars, safe_env)
         except ZeroDivisionError:
             # For manual calculation
-            base_model_prediction = sigmoid(0-0-1/18)
+            base_model_prediction = None
             print("INSERTED BASE PREDICTION MANUALLY!")
 
         # Evaluate the model
@@ -123,7 +123,7 @@ def create_evaluation_output(model_name: str, y_test, y_pred=None, y_pred_binari
                                                                  "contains non-linear interactions between variables.")
         print('\n')
 
-        #create_histogram(base_model_prediction, threshold, y_pred, y_test)
+        create_histogram(base_model_prediction, threshold, y_pred, y_test)
 
 
 def create_histogram(base_model_prediction, threshold, y_pred, y_test):
@@ -139,7 +139,7 @@ def create_histogram(base_model_prediction, threshold, y_pred, y_test):
     if base_model_prediction is not None:
         # Vertical line for base model prediction
         ax.axvline(base_model_prediction, color='blue', linestyle='--')
-        plt.text(base_model_prediction - 0.01, ax.get_ylim()[1] * 0.9,
+        plt.text(base_model_prediction - 0.02, ax.get_ylim()[1] * 0.9,
                  f'base\nmodel\nprediction\n={round(base_model_prediction, 2)}', color='blue', fontsize=9, va='top',
                  ha='right')
     plt.xlim((0, 1))
@@ -208,9 +208,9 @@ def sigmoid(x):
 
 if __name__ == "__main__":
     dataset = 'kkbox'
-    num_vars = 3
-    depth = min(num_vars * 2 + 1, 11)
-    seed = 2
+    num_vars = 20
+    depth = min(num_vars * 2 + 1, 8)
+    seed = 1
 
     results_path = f'../results/{dataset}_{num_vars}var_{depth}depth_seed{seed}.json'
     test_set_path = f'../data/train_val_test_data/{dataset}_{num_vars}vars_test_seed{seed}.csv'
@@ -225,12 +225,10 @@ if __name__ == "__main__":
                                   'InternetService_FiberOptic',
                                   'Contract_MonthToMonth', 'Contract_OneYear', 'Contract_TwoYear',
                                   'PaymentMethod_ElectronicCheck']
-
     telco_column_names10_seed1 = ['tenure', 'OnlineSecurity', 'PaperlessBilling', 'MonthlyCharges', 'TotalCharges',
                                   'InternetService_DSL',
                                   'InternetService_FiberOptic', 'Contract_MonthToMonth', 'Contract_TwoYear',
                                   'PaymentMethod_ElectronicCheck']
-
     telco_column_names10_seed2 = ['tenure', 'StreamingMovies', 'PaperlessBilling', 'MonthlyCharges', 'TotalCharges',
                                   'InternetService_DSL',
                                   'InternetService_FiberOptic', 'Contract_MonthToMonth', 'Contract_TwoYear',
@@ -261,8 +259,53 @@ if __name__ == "__main__":
                 column_names = ['num_transactions', 'last_auto_renew', 'last_cancel']
         elif num_vars == 5:
             if seed == 0:
-                column_names = ['num_transactions', 'mean_auto_renew', 'last_auto_renew', 'mean_cancel', 'last_cancel']
+                column_names = ['num_transactions', 'mean_auto_renew', 'last_auto_renew', 'mean_cancel',
+                                'last_cancel']
+            elif seed == 1 or seed == 2:
+                column_names = ['num_transactions', 'mean_act_pay', 'mean_auto_renew', 'last_auto_renew',
+                                'last_cancel']
+        elif num_vars == 10:
+            if seed == 0:
+                column_names = ['num_transactions', 'total_act_pay', 'mean_act_pay', 'mean_plan_days',
+                                'mean_auto_renew', 'last_auto_renew', 'mean_cancel', 'last_cancel',
+                                'total_secs_diff_last_30_vs_last_60_avg',
+                                'total_secs_diff_last_60_vs_last_365_avg']
             elif seed == 1:
-                column_names = ['num_transactions', 'mean_act_pay', 'mean_auto_renew', 'last_auto_renew', 'last_cancel']
+                column_names = ['num_transactions', 'total_act_pay', 'mean_act_pay', 'mean_plan_days',
+                                'mean_auto_renew', 'last_auto_renew', 'mean_cancel', 'last_cancel',
+                                'total_secs_diff_last_30_vs_last_60_avg',
+                                'total_secs_diff_last_60_vs_last_365_avg']
+            elif seed == 2:
+                column_names = ['num_transactions', 'total_act_pay', 'mean_act_pay', 'mean_plan_days',
+                                'mean_auto_renew', 'last_auto_renew', 'mean_cancel', 'last_cancel',
+                                'total_secs_diff_last_30_vs_last_60_avg',
+                                'total_secs_diff_last_60_vs_last_365_avg']
+        elif num_vars == 20:
+            if seed == 0:
+                column_names = ['age', 'registration_init_time', 'num_transactions', 'total_act_pay',
+                                'mean_act_pay', 'mean_plan_days', 'mean_pay_diff', 'last_pay_diff',
+                                'mean_auto_renew', 'last_auto_renew', 'mean_cancel', 'last_cancel',
+                                'last_90days_total_secs', 'last_180days_total_secs', 'last_270days_total_secs',
+                                'total_secs_diff_last_30_vs_last_60_avg',
+                                'total_secs_diff_last_30_vs_last_90_avg',
+                                'total_secs_diff_last_30_vs_last_180_avg',
+                                'total_secs_diff_last_60_vs_last_365_avg', 'gender_not_specified']
+            elif seed == 1:
+                column_names = ['age', 'registration_init_time', 'num_transactions', 'total_act_pay',
+                                'mean_act_pay', 'mean_plan_days', 'mean_pay_diff', 'last_pay_diff',
+                                'mean_auto_renew', 'last_auto_renew', 'mean_cancel', 'last_cancel',
+                                'last_30days_total_secs', 'last_60days_total_secs', 'last_180days_total_secs',
+                                'last_270days_total_secs', 'avg_num100_per_num_unq',
+                                'total_secs_diff_last_30_vs_last_60_avg',
+                                'total_secs_diff_last_30_vs_last_90_avg',
+                                'total_secs_diff_last_60_vs_last_365_avg']
+            elif seed == 2:
+                column_names = ['age', 'registration_init_time', 'num_transactions', 'total_act_pay',
+                                'mean_act_pay', 'mean_plan_days', 'mean_pay_diff', 'last_pay_diff',
+                                'mean_auto_renew', 'last_auto_renew', 'mean_cancel', 'last_cancel',
+                                'last_30days_total_secs', 'last_60days_total_secs', 'last_90days_total_secs',
+                                'last_180days_total_secs', 'total_secs_diff_last_30_vs_last_60_avg',
+                                'total_secs_diff_last_30_vs_last_90_avg',
+                                'total_secs_diff_last_60_vs_last_365_avg', 'gender_not_specified']
 
-    evaluate_SR_expression(results_path, test_set_path, threshold=0.4, num_vars=num_vars, column_names=column_names)
+    evaluate_SR_expression(results_path, test_set_path, threshold=0.3, num_vars=num_vars, column_names=column_names)
