@@ -34,7 +34,9 @@ if __name__ == '__main__':
     # the number of variables kept can also be selected directly
     num_shap_features = 20
 
-    use_shap = True
+    use_shapley_values = True
+    use_existing_expression_set = False
+    use_existing_HVAE_parameters = False
     verbose = True
     dataset = 'kkbox'  # 'telco' or 'kkbox'
 
@@ -86,7 +88,7 @@ if __name__ == '__main__':
                                param_grid=param_grid,
                                verbose=verbose)
 
-    if use_shap:
+    if use_shapley_values:
         # Perform Shap analysis
         columns_to_drop = shap_analysis(full_xgb_model, full_X_test,
                                         #min_normalized_importance=min_normalized_importance,
@@ -126,53 +128,52 @@ if __name__ == '__main__':
     # SR Time-keeping
     sr_start_time = time.time()
 
-    # # Generate Expression Set
-    # expression_set_path = generate_sr_expressions(symbols=expr_def_config['symbols'],
-    #                                               num_variables=num_variables,
-    #                                               has_constants=expr_def_config['has_constants'],
-    #                                               num_expressions=expr_gen_config['num_expressions'],
-    #                                               max_tree_height=maximum_tree_height,
-    #                                               expression_set_path=expr_gen_config['expression_set_path'],
-    #                                               filename=None,
-    #                                               use_existing=False)
-    #
-    # # Train the HVAE model
-    # params_path = train_HVAE_model(symbols=expr_def_config['symbols'],
-    #                                num_variables=num_variables,
-    #                                has_constants=expr_def_config['has_constants'],
-    #                                max_tree_height=maximum_tree_height,
-    #                                expression_set_path=expression_set_path,
-    #                                training_config=training_config,
-    #                                verbose=verbose,
-    #                                filename=None,
-    #                                use_existing=False,
-    #                                random_state=random_state)
-    #
-    # # Run Symbolic Classification and select best model on Validation Set
-    # results_path = run_symbolic_classification(config, symbolic_regression_config, num_variables=num_variables,
-    #                                            symbols=expr_def_config['symbols'],
-    #                                            has_constants=expr_def_config['has_constants'],
-    #                                            max_tree_height=maximum_tree_height, params_path=params_path,
-    #                                            train_set_path=train_set_path, val_set_path=val_set_path,
-    #                                            dataset_name=dataset, random_state=random_state)
+    # Generate Expression Set
+    expression_set_path = generate_sr_expressions(symbols=expr_def_config['symbols'],
+                                                  num_variables=num_variables,
+                                                  has_constants=expr_def_config['has_constants'],
+                                                  num_expressions=expr_gen_config['num_expressions'],
+                                                  max_tree_height=maximum_tree_height,
+                                                  expression_set_path=expr_gen_config['expression_set_path'],
+                                                  filename=None,
+                                                  use_existing=use_existing_expression_set)
+
+    # Train the HVAE model
+    params_path = train_HVAE_model(symbols=expr_def_config['symbols'],
+                                   num_variables=num_variables,
+                                   has_constants=expr_def_config['has_constants'],
+                                   max_tree_height=maximum_tree_height,
+                                   expression_set_path=expression_set_path,
+                                   training_config=training_config,
+                                   verbose=verbose,
+                                   filename=None,
+                                   use_existing=use_existing_HVAE_parameters,
+                                   random_state=random_state)
+
+    # Run Symbolic Classification and select best model on Validation Set
+    results_path = run_symbolic_classification(config, symbolic_regression_config, num_variables=num_variables,
+                                               symbols=expr_def_config['symbols'],
+                                               has_constants=expr_def_config['has_constants'],
+                                               max_tree_height=maximum_tree_height, params_path=params_path,
+                                               train_set_path=train_set_path, val_set_path=val_set_path,
+                                               dataset_name=dataset, random_state=random_state)
 
     # SR Time-keeping
     print(f"Total Symbolic Regression Computation Time: {round((time.time() - sr_start_time) / 60, 2)} minutes.")
 
     # Evaluation of all Models on Test Set
     compare_model_results(full_X_test=full_X_test,
-                          shap_X_test=shap_X_test if use_shap else None,
+                          shap_X_test=shap_X_test if use_shapley_values else None,
                           sr_X_test=None,
                           y_test=y_test,
                           full_xgb_model=full_xgb_model,
-                          shap_xgb_model=shap_xgb_model if use_shap else None,
+                          shap_xgb_model=shap_xgb_model if use_shapley_values else None,
                           sr_model=None)
 
-    col_names = shap_X_test.columns if use_shap else full_X_test.columns
-    print(shap_X_test.columns)
-    print(full_X_test.columns)
-    # evaluate_SR_expression(results_path, test_set_path, symbolic_regression_config['threshold'],
-    #                        num_vars=num_variables, column_names=col_names)
+    col_names = shap_X_test.columns if use_shapley_values else full_X_test.columns
+
+    evaluate_SR_expression(results_path, test_set_path, symbolic_regression_config['threshold'],
+                           num_vars=num_variables, column_names=col_names)
 
     # Time-keeping
     print(f"Total execution time: {round((time.time() - start_time) / 60, 2)} minutes.")
