@@ -3,7 +3,7 @@
     // Operators and functions that occur in expressions
     "symbols": ["+", "-", "*", "/", "sin", "cos", "exp", "sqrt", "log", "^2", "^3", "^4", "^5"],
     // Number of variables that occur in expressions
-    "num_variables": 3,
+    "num_variables": 5,
     // True if expressions also contain constant parameters, otherwise false
     "has_constants": false
   },
@@ -23,7 +23,7 @@
     "verbose": true,
     // Dimensionality of the latent space
     "latent_size": 32,
-    "seed": 18,
+    "seed": 0,
     // Path where model parameters will be saved. If empty string, the parameters won't be saved
     "param_path":  "./params/"
   },
@@ -51,7 +51,7 @@
     "success_threshold": 1e-5,
     // Path to the file where results will be saved
     "results_path": "./results/",
-    "seed": 18,
+    "seed": 0,
     // Number of times each baseline will be ran
     "number_of_runs": 10,
     // Number of best expressions saved (-1 for all generated expressions)
